@@ -11,6 +11,7 @@
 #include <windows.h>
 #endif
 namespace n {
+struct Err:std::runtime_error{int line;Err(int l,const std::string&m):runtime_error(m),line(l){}};
 #ifdef _WIN32
 std::string guiText;
 LRESULT CALLBACK NovaWindowProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
@@ -50,7 +51,6 @@ void openWindow(const std::string& title, int width, int height, const std::stri
 #endif
 }
 
-struct Err:std::runtime_error{int line;Err(int l,const std::string&m):runtime_error(m),line(l){}};
 struct V{enum K{Num,Str,Bool,Nil} k=Nil;double d=0;std::string s;bool b=false;
  static V num(double x){V v;v.k=Num;v.d=x;return v;} static V str(std::string x){V v;v.k=Str;v.s=x;return v;} static V boo(bool x){V v;v.k=Bool;v.b=x;return v;}
  std::string show()const{if(k==Num){std::ostringstream o;o<<d;return o.str();}if(k==Str)return s;if(k==Bool)return b?"true":"false";return "nil";}
