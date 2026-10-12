@@ -24,6 +24,18 @@ while (i < 3) { say i; i = i + 1 }
 ```
 Conditions require parentheses and braces around blocks. Loops re-evaluate their condition before each iteration.
 
+## Console input and windows
+
+Use `input("Prompt: ")` to display a prompt and read one line from the console. The result is a string.
+
+On Windows, `window("Title", 640, 400, "Text shown in the window")` opens a native desktop window with a title and a text label. The script waits until the window is closed. The initial GUI API is intentionally small: buttons, input fields, events, and layout are not implemented yet. On non-Windows systems, `window()` reports that it is unsupported.
+
+```nova
+let name = input("What is your name? ")
+say "Hello, " + name
+window("Hello Nova", 500, 300, "Welcome to Nova!")
+```
+
 ## Comments
 Lines may begin with `#` or `//`.
 
