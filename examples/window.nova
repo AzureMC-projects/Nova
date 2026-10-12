@@ -1,0 +1,1 @@
+window("My first Nova window", 640, 400, "Hello from Nova!\nThis is a native Windows window.")
