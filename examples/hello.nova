@@ -1,0 +1,3 @@
+say "Hello, world!"
+let name = "Nova"
+say "Welcome to " + name + " v1!"
