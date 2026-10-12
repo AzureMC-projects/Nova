@@ -12,3 +12,7 @@ endif()
 enable_testing()
 add_test(NAME nova_smoke COMMAND "${CMAKE_COMMAND}" -DNOVA_EXECUTABLE=$<TARGET_FILE:nova> -DSOURCE_FILE=${CMAKE_CURRENT_SOURCE_DIR}/tests/smoke.nova -P ${CMAKE_CURRENT_SOURCE_DIR}/tests/run_smoke.cmake)
 install(TARGETS nova RUNTIME DESTINATION bin)
+
+if(WIN32)
+  target_link_libraries(nova PRIVATE user32 gdi32)
+endif()
