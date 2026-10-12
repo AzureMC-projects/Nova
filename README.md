@@ -36,6 +36,6 @@ if (i == 4) {
 - say/print, if/else, while, block scopes
 - # and // line comments
 - File execution, interactive prompt, help/version flags
-- Line-numbered syntax/runtime errors
+- Console input with `input("Prompt: ")`\n- Basic native Windows GUI windows with `window("Title", width, height, "Text")`\n- Line-numbered syntax/runtime errors
 
-Functions, collections, imports, package management, bytecode, and native compilation are future work, not v1 features. See [docs/LANGUAGE.md](docs/LANGUAGE.md).
+Functions, collections, imports, package management, bytecode, native compilation, and interactive GUI controls are future work. The first `window()` implementation is Windows-only and displays a title and static text. See [docs/LANGUAGE.md](docs/LANGUAGE.md).
