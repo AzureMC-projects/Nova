@@ -1,0 +1,6 @@
+say "Nova test"
+let n = 2 + 3 * 4
+if (n == 14) { say "PASS" } else { say "FAIL" }
+let i = 0
+while (i < 2) { i = i + 1 }
+say i
