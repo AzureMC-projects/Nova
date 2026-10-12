@@ -1,0 +1,30 @@
+name: Build Nova for Windows
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build-windows-x64:
+    runs-on: windows-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Configure
+        run: cmake -S . -B build -A x64 -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded
+
+      - name: Build release executable
+        run: cmake --build build --config Release
+
+      - name: Run tests
+        run: ctest --test-dir build -C Release --output-on-failure
+
+      - name: Upload Nova executable
+        uses: actions/upload-artifact@v4
+        with:
+          name: nova-windows-x64
+          path: build/Release/nova.exe
+          if-no-files-found: error
+          retention-days: 30
