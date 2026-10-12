@@ -1,0 +1,7 @@
+execute_process(COMMAND "${NOVA_EXECUTABLE}" "${SOURCE_FILE}" RESULT_VARIABLE result OUTPUT_VARIABLE output ERROR_VARIABLE error)
+if(NOT result EQUAL 0)
+ message(FATAL_ERROR "Nova smoke test failed: ${error}")
+endif()
+if(NOT output MATCHES "Nova test" OR NOT output MATCHES "PASS" OR NOT output MATCHES "2")
+ message(FATAL_ERROR "Unexpected Nova output: ${output}")
+endif()
