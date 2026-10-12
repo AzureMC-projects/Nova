@@ -6,13 +6,56 @@
 #include <stdexcept>
 #include <string>
 #include <vector>
+#ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#endif
 namespace n {
+#ifdef _WIN32
+std::string guiText;
+LRESULT CALLBACK NovaWindowProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
+ if (msg == WM_CREATE) {
+  CreateWindowA("STATIC", guiText.c_str(), WS_CHILD | WS_VISIBLE | SS_LEFT,
+   16, 16, 440, 220, hwnd, nullptr, GetModuleHandleA(nullptr), nullptr);
+  return 0;
+ }
+ if (msg == WM_DESTROY) { PostQuitMessage(0); return 0; }
+ return DefWindowProcA(hwnd, msg, wp, lp);
+}
+#endif
+void openWindow(const std::string& title, int width, int height, const std::string& text, int line) {
+ if (width < 100 || height < 100 || width > 4000 || height > 4000)
+  throw Err(line, "Window dimensions must be between 100 and 4000 pixels.");
+#ifdef _WIN32
+ guiText = text;
+ HINSTANCE inst = GetModuleHandleA(nullptr);
+ const char* cls = "NovaScriptWindow";
+ WNDCLASSA wc{};
+ wc.lpfnWndProc = NovaWindowProc;
+ wc.hInstance = inst;
+ wc.lpszClassName = cls;
+ wc.hCursor = LoadCursor(nullptr, IDC_ARROW);
+ wc.hbrBackground = reinterpret_cast<HBRUSH>(COLOR_WINDOW + 1);
+ RegisterClassA(&wc);
+ HWND hwnd = CreateWindowA(cls, title.c_str(), WS_OVERLAPPEDWINDOW,
+  CW_USEDEFAULT, CW_USEDEFAULT, width, height, nullptr, nullptr, inst, nullptr);
+ if (!hwnd) throw Err(line, "Could not create window.");
+ ShowWindow(hwnd, SW_SHOW);
+ UpdateWindow(hwnd);
+ MSG msg;
+ while (GetMessageA(&msg, nullptr, 0, 0) > 0) { TranslateMessage(&msg); DispatchMessageA(&msg); }
+#else
+ (void)title; (void)text;
+ throw Err(line, "The window() built-in is currently supported on Windows only.");
+#endif
+}
+
 struct Err:std::runtime_error{int line;Err(int l,const std::string&m):runtime_error(m),line(l){}};
 struct V{enum K{Num,Str,Bool,Nil} k=Nil;double d=0;std::string s;bool b=false;
  static V num(double x){V v;v.k=Num;v.d=x;return v;} static V str(std::string x){V v;v.k=Str;v.s=x;return v;} static V boo(bool x){V v;v.k=Bool;v.b=x;return v;}
  std::string show()const{if(k==Num){std::ostringstream o;o<<d;return o.str();}if(k==Str)return s;if(k==Bool)return b?"true":"false";return "nil";}
  bool truth()const{return k==Nil?false:k==Bool?b:true;}};
-enum T{END,NUMBER,STRING,ID,LP,RP,LB,RB,SEMI,PLUS,MINUS,STAR,SLASH,PERCENT,BANG,NE,EQ,EE,LT,LE,GT,GE,LET,SAY,PRINT,IF,ELSE,WHILE,TRUE,FALSE,NIL,AND,OR};
+enum T{END,NUMBER,STRING,ID,LP,RP,LB,RB,SEMI,COMMA,PLUS,MINUS,STAR,SLASH,PERCENT,BANG,NE,EQ,EE,LT,LE,GT,GE,LET,SAY,PRINT,IF,ELSE,WHILE,TRUE,FALSE,NIL,AND,OR};
 struct Tok{T t;std::string s;int l;};
 struct Lex{std::string s;size_t i=0;int line=1;std::vector<Tok> v;
  char peek(int n=0){return i+n<s.size()?s[i+n]:0;} char take(){char c=peek();if(c){i++;if(c=='\n')line++;}return c;}
@@ -26,7 +69,7 @@ struct Lex{std::string s;size_t i=0;int line=1;std::vector<Tok> v;
  static const std::map<std::string,T> kw={{"let",LET},{"say",SAY},{"print",PRINT},{"if",IF},{"else",ELSE},{"while",WHILE},{"true",TRUE},{"false",FALSE},{"nil",NIL},{"and",AND},{"or",OR}};
  auto z=kw.find(w);v.push_back({z==kw.end()?ID:z->second,w,l});continue;}
  auto two=[&](char x,T yes,T no){if(peek()==x){take();v.push_back({yes,s.substr(a,i-a),l});}else v.push_back({no,s.substr(a,i-a),l});};
- switch(c){case '(':add(LP,a,l);break;case ')':add(RP,a,l);break;case '{':add(LB,a,l);break;case '}':add(RB,a,l);break;case ';':add(SEMI,a,l);break;case '+':add(PLUS,a,l);break;case '-':add(MINUS,a,l);break;case '*':add(STAR,a,l);break;case '/':add(SLASH,a,l);break;case '%':add(PERCENT,a,l);break;case '!':two('=',NE,BANG);break;case '=':two('=',EE,EQ);break;case '<':two('=',LE,LT);break;case '>':two('=',GE,GT);break;default:throw Err(l,std::string("Unexpected character '")+c+"'.");}}
+ switch(c){case '(':add(LP,a,l);break;case ')':add(RP,a,l);break;case '{':add(LB,a,l);break;case '}':add(RB,a,l);break;case ';':add(SEMI,a,l);break;case ',':add(COMMA,a,l);break;case '+':add(PLUS,a,l);break;case '-':add(MINUS,a,l);break;case '*':add(STAR,a,l);break;case '/':add(SLASH,a,l);break;case '%':add(PERCENT,a,l);break;case '!':two('=',NE,BANG);break;case '=':two('=',EE,EQ);break;case '<':two('=',LE,LT);break;case '>':two('=',GE,GT);break;default:throw Err(l,std::string("Unexpected character '")+c+"'.");}}
  v.push_back({END,"",line});return v;}
 };
 struct Parser{
@@ -43,7 +86,7 @@ struct Parser{
  V term(){V a=factor();while(ck(PLUS)||ck(MINUS)){T op=t[p++].t;V b=factor();if(op==PLUS&&(a.k==V::Str||b.k==V::Str))a=V::str(a.show()+b.show());else{nums(a,b);a=V::num(op==PLUS?a.d+b.d:a.d-b.d);}}return a;}
  V factor(){V a=unary();while(ck(STAR)||ck(SLASH)||ck(PERCENT)){T op=t[p++].t;V b=unary();nums(a,b);if((op==SLASH||op==PERCENT)&&b.d==0)throw Err(cur().l,"Division by zero.");a=V::num(op==STAR?a.d*b.d:op==SLASH?a.d/b.d:std::fmod(a.d,b.d));}return a;}
  V unary(){if(mt(BANG))return V::boo(!unary().truth());if(mt(MINUS)){V a=unary();if(a.k!=V::Num)throw Err(cur().l,"Unary minus requires a number.");return V::num(-a.d);}return primary();}
- V primary(){if(mt(NUMBER))return V::num(std::stod(t[p-1].s));if(mt(STRING))return V::str(t[p-1].s);if(mt(TRUE))return V::boo(true);if(mt(FALSE))return V::boo(false);if(mt(NIL))return V{};if(mt(ID))return get(t[p-1].s,t[p-1].l);if(mt(LP)){V a=expression();need(RP,"Expected ')' after expression.");return a;}throw Err(cur().l,"Expected expression.");}
+ V primary(){if(mt(NUMBER))return V::num(std::stod(t[p-1].s));if(mt(STRING))return V::str(t[p-1].s);if(mt(TRUE))return V::boo(true);if(mt(FALSE))return V::boo(false);if(mt(NIL))return V{};if(mt(ID)){Tok name=t[p-1];if(mt(LP)){if(name.s=="input"){V prompt=expression();need(RP,"Expected ')' after input prompt.");if(prompt.k!=V::Str)throw Err(name.l,"input() prompt must be a string.");std::cout<<prompt.s;std::cout.flush();std::string answer;if(!std::getline(std::cin,answer))answer="";return V::str(answer);}if(name.s=="window"){V title=expression();need(COMMA,"Expected ',' after window title.");V w=expression();need(COMMA,"Expected ',' after window width.");V h=expression();need(COMMA,"Expected ',' after window height.");V body=expression();need(RP,"Expected ')' after window arguments.");if(title.k!=V::Str||body.k!=V::Str||w.k!=V::Num||h.k!=V::Num)throw Err(name.l,"window() expects (string, number, number, string).");openWindow(title.s,static_cast<int>(w.d),static_cast<int>(h.d),body.s,name.l);return V{};}return get(name.s,name.l);}return get(name.s,name.l);}if(mt(LP)){V a=expression();need(RP,"Expected ')' after expression.");return a;}throw Err(cur().l,"Expected expression.");}
  size_t matching(size_t start){int d=1;for(size_t i=start;i<t.size();i++){if(t[i].t==LB)d++;if(t[i].t==RB&&--d==0)return i+1;}throw Err(cur().l,"Unclosed block.");}
  void block(){scopes.emplace_back();while(!ck(RB)&&!ck(END))stmt();need(RB,"Expected '}' after block.");scopes.pop_back();}
  void skip(){size_t e=matching(p);p=e;}
